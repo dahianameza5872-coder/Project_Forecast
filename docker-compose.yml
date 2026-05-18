@@ -1,0 +1,41 @@
+x-airflow-common:
+  &airflow-common
+  build: .
+  environment:
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+
+  volumes:
+    - ./:/opt/airflow
+
+  user: "${AIRFLOW_UID:-50000}:0"
+
+services:
+
+  airflow-init:
+    <<: *airflow-common
+    command: airflow db init
+    restart: "no"
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: airflow scheduler
+    restart: always
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: airflow webserver
+
+    ports:
+      - "8080:8080"
+
+    restart: always
+
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
